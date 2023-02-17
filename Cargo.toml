@@ -1,0 +1,12 @@
+[package]
+name = "nmap_xml"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+log = { version = "0.4" }
+env_logger = { version = "0.10" }
+chrono = { version = "0.4" }
+
+serde = { version = "1.0", features = [ "derive" ] }
+serde-xml-rs = { version = "0.6" }
