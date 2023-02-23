@@ -11,3 +11,4 @@ chrono = { version = "0.4" }
 void = { version = "1" }
 serde = { version = "1.0", features = [ "derive" ] }
 serde-xml-rs = { version = "0.6" }
+minijinja = { version = "0.30.4" }

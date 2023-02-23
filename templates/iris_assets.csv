@@ -1,0 +1,6 @@
+asset_name,asset_type_name,asset_description,asset_ip,asset_domain,asset_tags
+{%- for host in hosts %}
+{{host.address.addr}},Windows - Computer,,{{host.address.addr}},,import
+{%- endfor %}
+
+Type: {{ scaninfo.scantype }}

@@ -2,11 +2,14 @@ use serde::de::{self, Visitor, MapAccess};
 use void::Void;
 
 use serde::{Deserialize, Deserializer};
+
 use std::string::String;
 use std::fmt;
 use std::net::IpAddr;
 use std::marker::PhantomData;
+
 use std::str::FromStr;
+use minijinja::value::Object;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct NampRun {
@@ -14,6 +17,8 @@ pub(crate) struct NampRun {
 	#[serde(rename = "host", default = "Vec::new")]
 	pub hosts: Vec<Host>,
 }
+impl fmt::Display for NampRun { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
+impl Object for NampRun {}
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct ScanInfo {
@@ -24,6 +29,8 @@ pub(crate) struct ScanInfo {
 	pub num_services: i32,
 	pub services: String,
 }
+impl fmt::Display for ScanInfo { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
+impl Object for ScanInfo {}
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct Host {
@@ -33,6 +40,8 @@ pub(crate) struct Host {
 	pub ports: Ports,
 	pub os: Option<OperatingSystem>,
 }
+impl fmt::Display for Host { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
+impl Object for Host {}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -42,6 +51,8 @@ pub(crate) enum HostStates {
 	UNKNOWN,
 	SKIPPED,
 }
+impl fmt::Display for HostStates { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
+impl Object for HostStates {}
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct HostState {
@@ -50,12 +61,16 @@ pub(crate) struct HostState {
 	#[serde(rename = "reason_ttl")]
 	pub ttl: i16,
 }
+impl fmt::Display for HostState{ fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
+impl Object for HostState {}
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct HostNames {
 	#[serde(default = "Vec::new")]
 	pub hostname: Vec<HostName>,
 }
+impl fmt::Display for HostNames { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
+impl Object for HostNames {}
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct HostName {
@@ -63,6 +78,8 @@ pub(crate) struct HostName {
 	#[serde(rename = "type")]
 	pub host_type: String,
 }
+impl fmt::Display for HostName { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
+impl Object for HostName {}
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct HostAddress {
@@ -71,12 +88,16 @@ pub(crate) struct HostAddress {
 	pub address_type: String,
 	pub vendor: Option<String>,
 }
+impl fmt::Display for HostAddress { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
+impl Object for HostAddress {}
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct Ports {
 	#[serde(default = "Vec::new")]
 	pub port: Vec<Port>,
 }
+impl fmt::Display for Ports { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
+impl Object for Ports {}
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct Port {
@@ -90,6 +111,8 @@ pub(crate) struct Port {
 	#[serde(default = "Vec::new")]
 	pub script: Vec<Script>,
 }
+impl fmt::Display for Port { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
+impl Object for Port {}
 
 /// Tag <port> has an element <state state="" ...>
 /// Tag <os><portused> has an attribute state=""
@@ -132,6 +155,8 @@ pub(crate) enum Protocol {
 	SCTP,
 }
 impl Protocol { fn default() -> Protocol { Protocol::TCP } }
+impl fmt::Display for Protocol { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
+impl Object for Protocol {}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -141,6 +166,8 @@ pub(crate) enum State {
 	CLOSED,
 }
 impl State { fn default() -> State { State::FILTERED } }
+impl fmt::Display for State { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
+impl Object for State {}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -149,6 +176,8 @@ pub(crate) enum Tunnel {
 	SSL,
 }
 impl Tunnel { fn default() -> Tunnel { Tunnel::NO } }
+impl fmt::Display for Tunnel { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
+impl Object for Tunnel {}
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct PortState {
@@ -158,6 +187,8 @@ pub(crate) struct PortState {
 	#[serde(rename = "reason_ttl")]
 	pub ttl: i16,
 }
+impl fmt::Display for PortState { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
+impl Object for PortState {}
 impl FromStr for PortState {
 	type Err = Void;
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -186,12 +217,16 @@ pub(crate) struct PortService {
 	#[serde(default = "Vec::new")]
 	pub cpe: Vec<Cpe>,
 }
+impl fmt::Display for PortService { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
+impl Object for PortService {}
 
 #[derive(Debug, Deserialize)]
 pub (crate) struct Cpe {
 	#[serde(rename = "$value")]
 	pub value: String,
 }
+impl fmt::Display for Cpe { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
+impl Object for Cpe {}
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct Script {
@@ -203,6 +238,8 @@ pub(crate) struct Script {
 	#[serde(default = "Vec::new")]
 	pub table: Vec<Table>,
 }
+impl fmt::Display for Script { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
+impl Object for Script {}
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct Table {
@@ -210,6 +247,8 @@ pub(crate) struct Table {
 	#[serde(rename = "table")]
 	pub rows: Vec<Row>,
 }
+impl fmt::Display for Table { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
+impl Object for Table {}
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct Row {
@@ -217,6 +256,8 @@ pub(crate) struct Row {
 	#[serde(rename = "$value")]
 	pub value: Vec<Col>,
 }
+impl fmt::Display for Row { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
+impl Object for Row {}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -225,6 +266,8 @@ pub(crate) enum Col {
 	#[serde(rename = "table", deserialize_with = "deserialize_inner_table")]
 	Other(String),
 }
+impl fmt::Display for Col { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
+impl Object for Col {}
 fn deserialize_inner_table<'de, D: Deserializer<'de>>(deserializer: D) -> Result<String, D::Error> {
 	de::IgnoredAny::deserialize(deserializer)?;
 	Ok(String::from("Tables in tables not yet supported"))
@@ -236,6 +279,8 @@ pub(crate) struct Element {
 	#[serde(rename = "$value")]
 	pub value: String,
 }
+impl fmt::Display for Element { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
+impl Object for Element {}
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct OperatingSystem {
@@ -244,6 +289,8 @@ pub(crate) struct OperatingSystem {
 	#[serde(rename = "osmatch", default = "Vec::new")]
 	pub matches: Vec<OsMatch>,
 }
+impl fmt::Display for OperatingSystem { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
+impl Object for OperatingSystem {}
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct OsMatch {
@@ -252,6 +299,8 @@ pub(crate) struct OsMatch {
 	#[serde(rename = "osclass", default = "Vec::new")]
 	pub classes: Vec<OsClass>,
 }
+impl fmt::Display for OsMatch { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
+impl Object for OsMatch {}
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct OsClass {
@@ -266,8 +315,6 @@ pub(crate) struct OsClass {
 	#[serde(default = "Vec::new")]
 	pub cpe: Vec<Cpe>,
 }
-
-
-
-
+impl fmt::Display for OsClass { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
+impl Object for OsClass {}
 

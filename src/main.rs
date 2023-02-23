@@ -8,13 +8,15 @@ use env_logger;
 
 pub use log::{info, warn, debug};
 
-fn main() -> Result<(), String> {
+fn main() {
 	env_logger::init();
 	let args: Vec<String> = env::args().collect();
 
 	match args.len() {
-		2 | 3 => from_xml(&args[args.len() - 1]),
-		_ => Err("Usage: nmap_xml [--file] nmap_output.xml".to_string()),
-	}
+		err if err < 3 => Err(Box::from("Usage: nmap_xml nmap_output.xml transform_to.tpl".to_string())),
+		_ => {
+			from_xml(&args[args.len() - 2], &args[args.len() - 1])
+		},
+	}.unwrap()
 
 }
