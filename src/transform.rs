@@ -14,17 +14,16 @@ pub fn from_xml(nmap_file: &str, template: &str) -> Result<(), Box<dyn std::erro
 
 	let mut env = Environment::new();
 	env.add_template("nmap", &source)?;
-	let context = Value::from_object(parsed);
-	//let tpl = env.get_template("nmap")?;
-	//let rendered = tpl.render(context)?;
+	let context = Value::from_struct_object(parsed);
+	let tpl = env.get_template("nmap")?;
+	let rendered = tpl.render(context)?;
 
-	let x = context.as_object();
-	log::error!("Rendered: {:?}", x);
+	print!("{}\n", rendered);
 
 	Ok(())
 }
 
-fn parse_nmap_xml(nmap_file: &str) -> Result<NampRun, Box<dyn std::error::Error>> {
+fn parse_nmap_xml(nmap_file: &str) -> Result<NmapRun, Box<dyn std::error::Error>> {
 	let path = Path::new(nmap_file);
 	let display = path.display();
 
@@ -39,7 +38,7 @@ fn parse_nmap_xml(nmap_file: &str) -> Result<NampRun, Box<dyn std::error::Error>
 		_ => {}
 	}
 
-	match from_str::<NampRun>(&content) {
+	match from_str::<NmapRun>(&content) {
 		Ok(parsed) => Ok(parsed),
 		Err(err) => Err(Box::from(format!("Failed to parse {}: {:#}", display, err)))
 	}

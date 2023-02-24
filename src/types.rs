@@ -5,22 +5,34 @@ use serde::{Deserialize, Deserializer};
 
 use std::string::String;
 use std::fmt;
-use std::net::IpAddr;
+//use std::net::IpAddr;
 use std::marker::PhantomData;
 
 use std::str::FromStr;
-use minijinja::value::Object;
+use minijinja::value::{StructObject, Value};
 
-#[derive(Debug, Deserialize)]
-pub(crate) struct NampRun {
+#[derive(Debug, Default, Clone, Deserialize)]
+pub(crate) struct NmapRun {
 	pub scaninfo: ScanInfo,
 	#[serde(rename = "host", default = "Vec::new")]
 	pub hosts: Vec<Host>,
 }
-impl fmt::Display for NampRun { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
-impl Object for NampRun {}
+impl StructObject for NmapRun {
+	fn get_field(&self, name: &str) -> Option<Value> {
+		match name {
+			"scaninfo" => Some(Value::from_struct_object(self.scaninfo.clone())),
+			"hosts" => Some(Value::from(self.hosts.clone())),
+			_ => panic!("Unknown field {} on {}", name, "NmapRun"),
+		}
+	}
+}
+impl From<NmapRun> for Value {
+	fn from(val: NmapRun) -> Self {
+		Value::from_struct_object(val)
+	}
+}
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize)]
 pub(crate) struct ScanInfo {
 	#[serde(rename = "type")]
 	pub scantype: String,
@@ -29,77 +41,207 @@ pub(crate) struct ScanInfo {
 	pub num_services: i32,
 	pub services: String,
 }
-impl fmt::Display for ScanInfo { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
-impl Object for ScanInfo {}
+impl StructObject for ScanInfo {
+	fn get_field(&self, name: &str) -> Option<Value> {
+		match name {
+			"scantype" => Some(Value::from(self.scantype.clone())),
+			"protocol" => Some(Value::from(self.protocol.clone())),
+			"num_services" => Some(Value::from(self.num_services.clone())),
+			"serices" => Some(Value::from(self.services.clone())),
+			_ => panic!("Unknown field {} on {}", name, "ScanInfo"),
+		}
+	}
+}
+impl From<ScanInfo> for Value {
+	fn from(val: ScanInfo) -> Self {
+		Value::from_struct_object(val)
+	}
+}
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize)]
 pub(crate) struct Host {
 	pub status: Option<HostState>,
 	pub hostnames: Option<HostNames>,
-	pub address: Option<HostAddress>,
+	pub address: Vec<HostAddress>,
 	pub ports: Ports,
 	pub os: Option<OperatingSystem>,
 }
-impl fmt::Display for Host { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
-impl Object for Host {}
+impl StructObject for Host {
+	fn get_field(&self, name: &str) -> Option<Value> {
+		match name {
+			"status" => Some(Value::from(self.status.clone().unwrap_or(Default::default()))),
+			"hostnames" => Some(Value::from(self.hostnames.clone().unwrap_or(Default::default()))),
+			"address" => Some(Value::from(self.address.clone())),
+			"ipv4" => self.address.iter()
+				.filter(|addr| addr.address_type == AddressType::IPV4)
+				.map(|val| Value::from(val.addr.clone()))
+				.next(),
+			"ipv6" => self.address.iter()
+				.filter(|addr| addr.address_type == AddressType::IPV6)
+				.map(|val| Value::from(val.addr.clone()))
+				.next(),
+			"mac" => self.address.iter()
+				.filter(|addr| addr.address_type == AddressType::MAC)
+				.map(|val| Value::from(val.addr.clone()))
+				.next(),
+			"ports" => Some(Value::from(self.ports.clone())),
+			"os" => Some(Value::from(self.os.clone().unwrap_or(Default::default()))),
+			_ => panic!("Unknown field {} on {}", name, "Host"),
+		}
+	}
+}
+impl From<Host> for Value {
+	fn from(val: Host) -> Self {
+		Value::from_struct_object(val)
+	}
+}
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum HostStates {
 	UP,
 	DOWN,
-	UNKNOWN,
 	SKIPPED,
+	UNKNOWN,
 }
-impl fmt::Display for HostStates { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
-impl Object for HostStates {}
+impl Default for HostStates { fn default() -> Self { Self::UNKNOWN } }
+impl From<HostStates> for Value {
+	fn from(val: HostStates) -> Self {
+		match val {
+			HostStates::UP => Value::from("up"),
+			HostStates::DOWN => Value::from("down"),
+			HostStates::SKIPPED => Value::from("skipped"),
+			_ => Value::from("unknown"),
+		}
+	}
+}
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize)]
 pub(crate) struct HostState {
 	pub state: HostStates,
 	pub reason: String,
 	#[serde(rename = "reason_ttl")]
 	pub ttl: i16,
 }
-impl fmt::Display for HostState{ fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
-impl Object for HostState {}
+impl StructObject for HostState {
+	fn get_field(&self, name: &str) -> Option<Value> {
+		match name {
+			"state" => Some(Value::from(self.state.clone())),
+			"reason" => Some(Value::from(self.reason.clone())),
+			"ttl" => Some(Value::from(self.ttl)),
+			_ => panic!("Unknown field {} on {}", name, "HostState"),
+		}
+	}
+}
+impl From<HostState> for Value {
+	fn from(val: HostState) -> Self {
+		Value::from_struct_object(val)
+	}
+}
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize)]
 pub(crate) struct HostNames {
 	#[serde(default = "Vec::new")]
 	pub hostname: Vec<HostName>,
 }
-impl fmt::Display for HostNames { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
-impl Object for HostNames {}
+impl StructObject for HostNames {
+	fn get_field(&self, name: &str) -> Option<Value> {
+		match name {
+			"hostname" => Some(Value::from(self.hostname.clone())),
+			_ => panic!("Unknown field {} on {}", name, "HostNames"),
+		}
+	}
+}
+impl From<HostNames> for Value {
+	fn from(val: HostNames) -> Self {
+		Value::from_struct_object(val)
+	}
+}
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize)]
 pub(crate) struct HostName {
 	pub name: String,
 	#[serde(rename = "type")]
 	pub host_type: String,
 }
-impl fmt::Display for HostName { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
-impl Object for HostName {}
+impl StructObject for HostName {
+	fn get_field(&self, name: &str) -> Option<Value> {
+		match name {
+			"name" => Some(Value::from(self.name.clone())),
+			"host_type" => Some(Value::from(self.host_type.clone())),
+			_ => panic!("Unknown field {} on {}", name, "HostName"),
+		}
+	}
+}
+impl From<HostName> for Value {
+	fn from(val: HostName) -> Self {
+		Value::from_struct_object(val)
+	}
+}
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize)]
 pub(crate) struct HostAddress {
-	pub addr: IpAddr,
+	pub addr: String,
 	#[serde(rename = "addrtype")]
-	pub address_type: String,
+	pub address_type: AddressType,
 	pub vendor: Option<String>,
 }
-impl fmt::Display for HostAddress { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
-impl Object for HostAddress {}
+impl StructObject for HostAddress {
+	fn get_field(&self, name: &str) -> Option<Value> {
+		match name {
+			"addr" => Some(Value::from(self.addr.clone())),
+			"address_type" => Some(Value::from(self.address_type.clone())),
+			"vendor" => Some(Value::from(self.vendor.clone().unwrap_or(Default::default()))),
+			_ => panic!("Unknown field {} on {}", name, "HostAddress"),
+		}
+	}
+}
+impl From<HostAddress> for Value {
+	fn from(val: HostAddress) -> Self {
+		Value::from_struct_object(val)
+	}
+}
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum AddressType {
+	IPV4,
+	IPV6,
+	MAC,
+	UNKNOWN,
+}
+impl Default for AddressType { fn default() -> Self { Self::UNKNOWN } }
+impl From<AddressType> for Value {
+	fn from(val: AddressType) -> Self {
+		match val {
+			AddressType::IPV4 => Value::from("ipv4"),
+			AddressType::IPV6 => Value::from("ipv6"),
+			AddressType::MAC => Value::from("mac"),
+			_ => Value::from("unknown"),
+		}
+	}
+}
+
+#[derive(Debug, Default, Clone, Deserialize)]
 pub(crate) struct Ports {
 	#[serde(default = "Vec::new")]
 	pub port: Vec<Port>,
 }
-impl fmt::Display for Ports { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
-impl Object for Ports {}
+impl StructObject for Ports {
+	fn get_field(&self, name: &str) -> Option<Value> {
+		match name {
+			"port" => Some(Value::from(self.port.clone())),
+			_ => panic!("Unknown field {} on {}", name, "Ports"),
+		}
+	}
+}
+impl From<Ports> for Value {
+	fn from(val: Ports) -> Self {
+		Value::from_struct_object(val)
+	}
+}
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize)]
 pub(crate) struct Port {
 	#[serde(alias = "proto", default = "Protocol::default")]
 	pub protocol: Protocol,
@@ -111,8 +253,23 @@ pub(crate) struct Port {
 	#[serde(default = "Vec::new")]
 	pub script: Vec<Script>,
 }
-impl fmt::Display for Port { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
-impl Object for Port {}
+impl StructObject for Port {
+	fn get_field(&self, name: &str) -> Option<Value> {
+		match name {
+			"protocol" => Some(Value::from(self.protocol.clone())),
+			"port" => Some(Value::from(self.port.clone())),
+			"state" => Some(Value::from(self.state.clone())),
+			"service" => Some(Value::from(self.service.clone().unwrap_or(Default::default()))),
+			"script" => Some(Value::from(self.script.clone())),
+			_ => panic!("Unknown field {} on {}", name, "Port"),
+		}
+	}
+}
+impl From<Port> for Value {
+	fn from(val: Port) -> Self {
+		Value::from_struct_object(val)
+	}
+}
 
 /// Tag <port> has an element <state state="" ...>
 /// Tag <os><portused> has an attribute state=""
@@ -146,7 +303,7 @@ where
 }
 
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum Protocol {
 	IP,
@@ -154,32 +311,53 @@ pub(crate) enum Protocol {
 	UDP,
 	SCTP,
 }
-impl Protocol { fn default() -> Protocol { Protocol::TCP } }
-impl fmt::Display for Protocol { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
-impl Object for Protocol {}
+impl Default for Protocol { fn default() -> Self { Self::TCP } }
+impl From<Protocol> for Value {
+	fn from(val: Protocol) -> Self {
+		match val {
+			Protocol::IP => Value::from("ip"),
+			Protocol::TCP => Value::from("tcp"),
+			Protocol::UDP => Value::from("udp"),
+			Protocol::SCTP => Value::from("sctp"),
+		}
+	}
+}
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum State {
 	OPEN,
-	FILTERED,
 	CLOSED,
+	FILTERED,
 }
-impl State { fn default() -> State { State::FILTERED } }
-impl fmt::Display for State { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
-impl Object for State {}
+impl Default for State { fn default() -> Self { Self::FILTERED } }
+impl From<State> for Value {
+	fn from(val: State) -> Self {
+		match val {
+			State::OPEN => Value::from("open"),
+			State::CLOSED => Value::from("closed"),
+			State::FILTERED => Value::from("filtered"),
+		}
+	}
+}
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum Tunnel {
 	NO,
 	SSL,
 }
-impl Tunnel { fn default() -> Tunnel { Tunnel::NO } }
-impl fmt::Display for Tunnel { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
-impl Object for Tunnel {}
+impl Default for Tunnel { fn default() -> Self { Self::NO } }
+impl From<Tunnel> for Value {
+	fn from(val: Tunnel) -> Self {
+		match val {
+			Tunnel::NO => Value::from("no_ssl"),
+			Tunnel::SSL => Value::from("ssl"),
+		}
+	}
+}
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize)]
 pub(crate) struct PortState {
 	#[serde(default = "State::default")]
 	pub state: State,
@@ -187,8 +365,21 @@ pub(crate) struct PortState {
 	#[serde(rename = "reason_ttl")]
 	pub ttl: i16,
 }
-impl fmt::Display for PortState { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
-impl Object for PortState {}
+impl StructObject for PortState {
+	fn get_field(&self, name: &str) -> Option<Value> {
+		match name {
+			"state" => Some(Value::from(self.state.clone())),
+			"reason" => Some(Value::from(self.reason.clone())),
+			"ttl" => Some(Value::from(self.ttl.clone())),
+			_ => panic!("Unknown field {} on {}", name, "PortState"),
+		}
+	}
+}
+impl From<PortState> for Value {
+	fn from(val: PortState) -> Self {
+		Value::from_struct_object(val)
+	}
+}
 impl FromStr for PortState {
 	type Err = Void;
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -204,7 +395,7 @@ impl FromStr for PortState {
 	}
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize)]
 pub(crate) struct PortService {
 	#[serde(rename = "name")]
 	pub service: String,
@@ -217,18 +408,45 @@ pub(crate) struct PortService {
 	#[serde(default = "Vec::new")]
 	pub cpe: Vec<Cpe>,
 }
-impl fmt::Display for PortService { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
-impl Object for PortService {}
+impl StructObject for PortService {
+	fn get_field(&self, name: &str) -> Option<Value> {
+		match name {
+			"service" => Some(Value::from(self.service.clone())),
+			"product" => Some(Value::from(self.product.clone().unwrap_or(Default::default()))),
+			"version" => Some(Value::from(self.version.clone().unwrap_or(Default::default()))),
+			"ssl" => Some(Value::from(self.ssl.clone())),
+			"footprint" => Some(Value::from(self.footprint.clone().unwrap_or(Default::default()))),
+			"cpe" => Some(Value::from(self.cpe.clone())),
+			_ => panic!("Unknown field {} on {}", name, "PortService"),
+		}
+	}
+}
+impl From<PortService> for Value {
+	fn from(val: PortService) -> Self {
+		Value::from_struct_object(val)
+	}
+}
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize)]
 pub (crate) struct Cpe {
 	#[serde(rename = "$value")]
 	pub value: String,
 }
-impl fmt::Display for Cpe { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
-impl Object for Cpe {}
+impl StructObject for Cpe {
+	fn get_field(&self, name: &str) -> Option<Value> {
+		match name {
+			"value" => Some(Value::from(self.value.clone())),
+			_ => panic!("Unknown field {} on {}", name, "Cpe"),
+		}
+	}
+}
+impl From<Cpe> for Value {
+	fn from(val: Cpe) -> Self {
+		Value::from_struct_object(val)
+	}
+}
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize)]
 pub(crate) struct Script {
 	pub id: String,
 	#[serde(rename = "output")]
@@ -238,71 +456,154 @@ pub(crate) struct Script {
 	#[serde(default = "Vec::new")]
 	pub table: Vec<Table>,
 }
-impl fmt::Display for Script { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
-impl Object for Script {}
+impl StructObject for Script {
+	fn get_field(&self, name: &str) -> Option<Value> {
+		match name {
+			"id" => Some(Value::from(self.id.clone())),
+			"raw" => Some(Value::from(self.raw.clone().unwrap_or(Default::default()))),
+			"elements" => Some(Value::from(self.elements.clone())),
+			"table" => Some(Value::from(self.table.clone())),
+			_ => panic!("Unknown field {} on {}", name, "Script"),
+		}
+	}
+}
+impl From<Script> for Value {
+	fn from(val: Script) -> Self {
+		Value::from_struct_object(val)
+	}
+}
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize)]
 pub(crate) struct Table {
 	pub key: Option<String>,
 	#[serde(rename = "table")]
 	pub rows: Vec<Row>,
 }
-impl fmt::Display for Table { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
-impl Object for Table {}
+impl StructObject for Table {
+	fn get_field(&self, name: &str) -> Option<Value> {
+		match name {
+			"key" => Some(Value::from(self.key.clone().unwrap_or(Default::default()))),
+			"rows" => Some(Value::from(self.rows.clone())),
 
-#[derive(Debug, Deserialize)]
+			_ => panic!("Unknown field {} on {}", name, "Table"),
+		}
+	}
+}
+impl From<Table> for Value {
+	fn from(val: Table) -> Self {
+		Value::from_struct_object(val)
+	}
+}
+
+#[derive(Debug, Default, Clone, Deserialize)]
 pub(crate) struct Row {
 	pub key: Option<String>,
 	#[serde(rename = "$value")]
 	pub value: Vec<Col>,
 }
-impl fmt::Display for Row { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
-impl Object for Row {}
+impl StructObject for Row {
+	fn get_field(&self, name: &str) -> Option<Value> {
+		match name {
+			"key" => Some(Value::from(self.key.clone().unwrap_or(Default::default()))),
+			"value" => Some(Value::from(self.value.clone())),
+			_ => panic!("Unknown field {} on {}", name, "Row"),
+		}
+	}
+}
+impl From<Row> for Value {
+	fn from(val: Row) -> Self {
+		Value::from_struct_object(val)
+	}
+}
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum Col {
 	Elem(Element),
 	#[serde(rename = "table", deserialize_with = "deserialize_inner_table")]
 	Other(String),
 }
-impl fmt::Display for Col { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
-impl Object for Col {}
+impl Default for Col { fn default() -> Self { Self::Other(String::from("Unknown")) } }
 fn deserialize_inner_table<'de, D: Deserializer<'de>>(deserializer: D) -> Result<String, D::Error> {
 	de::IgnoredAny::deserialize(deserializer)?;
 	Ok(String::from("Tables in tables not yet supported"))
 }
+impl From<Col> for Value {
+	fn from(val: Col) -> Self {
+		match val {
+			Col::Elem(elem) => Value::from_struct_object(elem),
+			Col::Other(msg) => Value::from(msg),
+		}
+	}
+}
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize)]
 pub(crate) struct Element {
 	pub key: Option<String>,
 	#[serde(rename = "$value")]
 	pub value: String,
 }
-impl fmt::Display for Element { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
-impl Object for Element {}
+impl StructObject for Element {
+	fn get_field(&self, name: &str) -> Option<Value> {
+		match name {
+			"key" => Some(Value::from(self.key.clone().unwrap_or(Default::default()))),
+			"value" => Some(Value::from(self.value.clone())),
+			_ => panic!("Unknown field {} on {}", name, "Element"),
+		}
+	}
+}
+impl From<Element> for Value {
+	fn from(val: Element) -> Self {
+		Value::from_struct_object(val)
+	}
+}
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize)]
 pub(crate) struct OperatingSystem {
 	#[serde(rename = "portused", default = "Vec::new")]
 	pub ports: Vec<Port>,
 	#[serde(rename = "osmatch", default = "Vec::new")]
 	pub matches: Vec<OsMatch>,
 }
-impl fmt::Display for OperatingSystem { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
-impl Object for OperatingSystem {}
+impl StructObject for OperatingSystem {
+	fn get_field(&self, name: &str) -> Option<Value> {
+		match name {
+			"ports" => Some(Value::from(self.ports.clone())),
+			"matches" => Some(Value::from(self.matches.clone())),
+			_ => panic!("Unknown field {} on {}", name, "OperatingSystem"),
+		}
+	}
+}
+impl From<OperatingSystem> for Value {
+	fn from(val: OperatingSystem) -> Self {
+		Value::from_struct_object(val)
+	}
+}
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize)]
 pub(crate) struct OsMatch {
 	pub name: String,
 	pub accuracy: i8,
 	#[serde(rename = "osclass", default = "Vec::new")]
 	pub classes: Vec<OsClass>,
 }
-impl fmt::Display for OsMatch { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
-impl Object for OsMatch {}
+impl StructObject for OsMatch {
+	fn get_field(&self, name: &str) -> Option<Value> {
+		match name {
+			"name" => Some(Value::from(self.name.clone())),
+			"accuracy" => Some(Value::from(self.accuracy.clone())),
+			"classes" => Some(Value::from(self.classes.clone())),
+			_ => panic!("Unknown field {} on {}", name, "OsMatch"),
+		}
+	}
+}
+impl From<OsMatch> for Value {
+	fn from(val: OsMatch) -> Self {
+		Value::from_struct_object(val)
+	}
+}
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize)]
 pub(crate) struct OsClass {
 	#[serde(rename = "type")]
 	pub os_type: Option<String>,
@@ -315,6 +616,22 @@ pub(crate) struct OsClass {
 	#[serde(default = "Vec::new")]
 	pub cpe: Vec<Cpe>,
 }
-impl fmt::Display for OsClass { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) } }
-impl Object for OsClass {}
-
+impl StructObject for OsClass {
+	fn get_field(&self, name: &str) -> Option<Value> {
+		match name {
+			"type" => Some(Value::from(self.os_type.clone().unwrap_or(Default::default()))),
+			"os_type" => Some(Value::from(self.os_type.clone().unwrap_or(Default::default()))),
+			"vendor" => Some(Value::from(self.vendor.clone())),
+			"accuracy" => Some(Value::from(self.accuracy.clone())),
+			"family" => Some(Value::from(self.family.clone())),
+			"generation" => Some(Value::from(self.generation.clone().unwrap_or(Default::default()))),
+			"cpe" => Some(Value::from(self.cpe.clone())),
+			_ => panic!("Unknown field {} on {}", name, "OsClass"),
+		}
+	}
+}
+impl From<OsClass> for Value {
+	fn from(val: OsClass) -> Self {
+		Value::from_struct_object(val)
+	}
+}
