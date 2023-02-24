@@ -17,6 +17,13 @@ pub(crate) struct NmapRun {
 	#[serde(rename = "host", default = "Vec::new")]
 	pub hosts: Vec<Host>,
 }
+impl NmapRun {
+	pub fn empty() -> Self {
+		let mut run = NmapRun::default();
+		run.hosts.push(Host::empty());
+		run
+	}
+}
 impl StructObject for NmapRun {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
@@ -65,6 +72,17 @@ pub(crate) struct Host {
 	pub address: Vec<HostAddress>,
 	pub ports: Ports,
 	pub os: Option<OperatingSystem>,
+}
+impl Host {
+	pub fn empty() -> Self {
+		let mut host = Host::default();
+		host.status = Some(HostState::empty());
+		host.hostnames = Some(HostNames::empty());
+		host.address.push(HostAddress::empty());
+		host.ports = Ports::empty();
+		host.os = Some(OperatingSystem::empty());
+		host
+	}
 }
 impl StructObject for Host {
 	fn get_field(&self, name: &str) -> Option<Value> {
@@ -123,6 +141,9 @@ pub(crate) struct HostState {
 	#[serde(rename = "reason_ttl")]
 	pub ttl: i16,
 }
+impl HostState {
+	pub fn empty() -> Self { HostState::default() }
+}
 impl StructObject for HostState {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
@@ -144,6 +165,14 @@ pub(crate) struct HostNames {
 	#[serde(default = "Vec::new")]
 	pub hostname: Vec<HostName>,
 }
+impl HostNames {
+	pub fn empty() -> Self {
+		let mut names = HostNames::default();
+		names.hostname.push(HostName::empty());
+		names.hostname.push(HostName::empty());
+		names
+	}
+}
 impl StructObject for HostNames {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
@@ -164,6 +193,7 @@ pub(crate) struct HostName {
 	#[serde(rename = "type")]
 	pub host_type: String,
 }
+impl HostName { pub fn empty() -> Self { HostName::default() } }
 impl StructObject for HostName {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
@@ -185,6 +215,13 @@ pub(crate) struct HostAddress {
 	#[serde(rename = "addrtype")]
 	pub address_type: AddressType,
 	pub vendor: Option<String>,
+}
+impl HostAddress {
+	pub fn empty() -> Self {
+		let mut addr = HostAddress::default();
+		addr.vendor = Some(String::from(""));
+		addr
+	}
 }
 impl StructObject for HostAddress {
 	fn get_field(&self, name: &str) -> Option<Value> {
@@ -227,6 +264,13 @@ pub(crate) struct Ports {
 	#[serde(default = "Vec::new")]
 	pub port: Vec<Port>,
 }
+impl Ports {
+	pub fn empty() -> Self {
+		let mut ports = Ports::default();
+		ports.port.push(Port::empty());
+		ports
+	}
+}
 impl StructObject for Ports {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
@@ -252,6 +296,15 @@ pub(crate) struct Port {
 	pub service: Option<PortService>,
 	#[serde(default = "Vec::new")]
 	pub script: Vec<Script>,
+}
+impl Port {
+	pub fn empty() -> Self {
+		let mut port = Port::default();
+		port.state = PortState::empty();
+		port.service = Some(PortService::empty());
+		port.script.push(Script::empty());
+		port
+	}
 }
 impl StructObject for Port {
 	fn get_field(&self, name: &str) -> Option<Value> {
@@ -365,6 +418,7 @@ pub(crate) struct PortState {
 	#[serde(rename = "reason_ttl")]
 	pub ttl: i16,
 }
+impl PortState { pub fn empty() -> Self { PortState::default() } }
 impl StructObject for PortState {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
@@ -408,6 +462,16 @@ pub(crate) struct PortService {
 	#[serde(default = "Vec::new")]
 	pub cpe: Vec<Cpe>,
 }
+impl PortService {
+	pub fn empty() -> Self {
+		let mut service = PortService::default();
+		service.product = Some(String::from(""));
+		service.version = Some(String::from(""));
+		service.footprint = Some(String::from(""));
+		service.cpe.push(Cpe::empty());
+		service
+	}
+}
 impl StructObject for PortService {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
@@ -432,6 +496,7 @@ pub (crate) struct Cpe {
 	#[serde(rename = "$value")]
 	pub value: String,
 }
+impl Cpe { pub fn empty() -> Self { Cpe::default() } }
 impl StructObject for Cpe {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
@@ -456,6 +521,15 @@ pub(crate) struct Script {
 	#[serde(default = "Vec::new")]
 	pub table: Vec<Table>,
 }
+impl Script {
+	pub fn empty() -> Self {
+		let mut script = Script::default();
+		script.raw = Some(String::from(""));
+		script.elements.push(Element::empty());
+		script.table.push(Table::empty());
+		script
+	}
+}
 impl StructObject for Script {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
@@ -479,6 +553,14 @@ pub(crate) struct Table {
 	#[serde(rename = "table")]
 	pub rows: Vec<Row>,
 }
+impl Table {
+	pub fn empty() -> Self {
+		let mut table = Table::default();
+		table.key = Some(String::from(""));
+		table.rows.push(Row::empty());
+		table
+	}
+}
 impl StructObject for Table {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
@@ -500,6 +582,14 @@ pub(crate) struct Row {
 	pub key: Option<String>,
 	#[serde(rename = "$value")]
 	pub value: Vec<Col>,
+}
+impl Row {
+	pub fn empty() -> Self {
+		let mut row = Row::default();
+		row.key = Some(String::from(""));
+		row.value.push(Col::default());
+		row
+	}
 }
 impl StructObject for Row {
 	fn get_field(&self, name: &str) -> Option<Value> {
@@ -543,6 +633,13 @@ pub(crate) struct Element {
 	#[serde(rename = "$value")]
 	pub value: String,
 }
+impl Element {
+	pub fn empty() -> Self {
+		let mut elem = Element::default();
+		elem.key = Some(String::from(""));
+		elem
+	}
+}
 impl StructObject for Element {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
@@ -565,6 +662,14 @@ pub(crate) struct OperatingSystem {
 	#[serde(rename = "osmatch", default = "Vec::new")]
 	pub matches: Vec<OsMatch>,
 }
+impl OperatingSystem {
+	pub fn empty() -> Self {
+		let mut os = OperatingSystem::default();
+		os.ports.push(Port::empty());
+		os.matches.push(OsMatch::empty());
+		os
+	}
+}
 impl StructObject for OperatingSystem {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
@@ -586,6 +691,13 @@ pub(crate) struct OsMatch {
 	pub accuracy: i8,
 	#[serde(rename = "osclass", default = "Vec::new")]
 	pub classes: Vec<OsClass>,
+}
+impl OsMatch {
+	pub fn empty() -> Self {
+		let mut osmatch = OsMatch::default();
+		osmatch.classes.push(OsClass::empty());
+		osmatch
+	}
 }
 impl StructObject for OsMatch {
 	fn get_field(&self, name: &str) -> Option<Value> {
@@ -615,6 +727,15 @@ pub(crate) struct OsClass {
 	pub generation: Option<String>,
 	#[serde(default = "Vec::new")]
 	pub cpe: Vec<Cpe>,
+}
+impl OsClass {
+	pub fn empty() -> Self {
+		let mut osclass = OsClass::default();
+		osclass.os_type = Some(String::from(""));
+		osclass.generation = Some(String::from(""));
+		osclass.cpe.push(Cpe::empty());
+		osclass
+	}
 }
 impl StructObject for OsClass {
 	fn get_field(&self, name: &str) -> Option<Value> {

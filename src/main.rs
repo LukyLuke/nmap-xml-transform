@@ -8,15 +8,25 @@ use env_logger;
 
 pub use log::{info, warn, debug};
 
-fn main() {
+fn main() ->Result<(), Box<dyn std::error::Error>> {
 	env_logger::init();
 	let args: Vec<String> = env::args().collect();
+	let usage = "Usage: nmap_xml (INPUT TEMPLATE | --format | -f)\n       INPUT\t\tXML-File from -oX nmap command\n       TEMPLATE\t\tJinja-2 Template file\n       --format|-f\tShows the data format to use in the output template".to_string();
+	let special = "Special:\n  hosts::host::ipv4\n  hosts::host::ipv6\n  hosts::host::mac";
+	let comment = "The Datastructure is a 1:1 mapping from nmap xml structure";
 
 	match args.len() {
-		err if err < 3 => Err(Box::from("Usage: nmap_xml nmap_output.xml transform_to.tpl".to_string())),
+		f if f == 2 && (args[f - 1] == "--format" || args[f - 1] == "-f") => {
+			println!("{}\n\nData-Structure: {}\n{:#?}\n\n{}", usage, comment, types::NmapRun::empty(), special);
+			Ok(())
+		},
+		err if err < 3 => {
+			println!("{}", usage);
+			Ok(())
+		},
 		_ => {
 			from_xml(&args[args.len() - 2], &args[args.len() - 1])
 		},
-	}.unwrap()
+	}
 
 }
