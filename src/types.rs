@@ -16,6 +16,11 @@ pub(crate) struct NmapRun {
 	pub scaninfo: ScanInfo,
 	#[serde(rename = "host", default = "Vec::new")]
 	pub hosts: Vec<Host>,
+	#[serde(rename = "args")]
+	pub command: String,
+	#[serde(rename = "startstr")]
+	pub start_time: String,
+	pub runstats: RunStats,
 }
 impl NmapRun {
 	pub fn empty() -> Self {
@@ -29,12 +34,87 @@ impl StructObject for NmapRun {
 		match name {
 			"scaninfo" => Some(Value::from_struct_object(self.scaninfo.clone())),
 			"hosts" => Some(Value::from(self.hosts.clone())),
+			"runstats" => Some(Value::from(self.runstats.clone())),
+			"command" => Some(Value::from(self.command.clone())),
+			"start_time" => Some(Value::from(self.start_time.clone())),
+			"finish_time" => Some(Value::from(self.runstats.finished.finish_time.clone())),
+			"elapsed_time" => Some(Value::from(self.runstats.finished.elapsed.clone())),
+			"status" => Some(Value::from(self.runstats.finished.status.clone())),
 			_ => panic!("Unknown field {} on {}", name, "NmapRun"),
 		}
 	}
 }
 impl From<NmapRun> for Value {
 	fn from(val: NmapRun) -> Self {
+		Value::from_struct_object(val)
+	}
+}
+
+#[derive(Debug, Default, Clone, Deserialize)]
+pub(crate) struct RunStats {
+	pub finished: Finished,
+	pub hosts: HostStats,
+}
+impl StructObject for RunStats {
+	fn get_field(&self, name: &str) -> Option<Value> {
+		match name {
+			"finished" => Some(Value::from_struct_object(self.finished.clone())),
+			"hosts" => Some(Value::from_struct_object(self.hosts.clone())),
+			"hosts_total" => Some(Value::from(self.hosts.total.clone())),
+			"hosts_online" => Some(Value::from(self.hosts.up.clone())),
+			"hosts_offline" => Some(Value::from(self.hosts.down.clone())),
+			_ => panic!("Unknown field {} on {}", name, "RunStats"),
+		}
+	}
+}
+impl From<RunStats> for Value {
+	fn from(val: RunStats) -> Self {
+		Value::from_struct_object(val)
+	}
+}
+
+#[derive(Debug, Default, Clone, Deserialize)]
+pub(crate) struct Finished {
+	#[serde(rename = "timestr")]
+	pub finish_time: String,
+	pub elapsed: f64,
+	#[serde(rename = "exit")]
+	pub status: String,
+}
+impl StructObject for Finished {
+	fn get_field(&self, name: &str) -> Option<Value> {
+		match name {
+			"finish_time" => Some(Value::from(self.finish_time.clone())),
+			"elapsed" => Some(Value::from(self.elapsed.clone())),
+			"status" => Some(Value::from(self.status.clone())),
+			_ => panic!("Unknown field {} on {}", name, "Finished"),
+		}
+	}
+}
+impl From<Finished> for Value {
+	fn from(val: Finished) -> Self {
+		Value::from_struct_object(val)
+	}
+}
+
+#[derive(Debug, Default, Clone, Deserialize)]
+pub(crate) struct HostStats {
+	pub up: i64,
+	pub down: i64,
+	pub total: i64,
+}
+impl StructObject for HostStats {
+	fn get_field(&self, name: &str) -> Option<Value> {
+		match name {
+			"up" => Some(Value::from(self.up.clone())),
+			"down" => Some(Value::from(self.down.clone())),
+			"total" => Some(Value::from(self.total.clone())),
+			_ => panic!("Unknown field {} on {}", name, "RunStats"),
+		}
+	}
+}
+impl From<HostStats> for Value {
+	fn from(val: HostStats) -> Self {
 		Value::from_struct_object(val)
 	}
 }
@@ -168,7 +248,6 @@ pub(crate) struct HostNames {
 impl HostNames {
 	pub fn empty() -> Self {
 		let mut names = HostNames::default();
-		names.hostname.push(HostName::empty());
 		names.hostname.push(HostName::empty());
 		names
 	}
@@ -669,12 +748,51 @@ impl OperatingSystem {
 		os.matches.push(OsMatch::empty());
 		os
 	}
+
+	fn get_combined_os_classes(&self) -> Vec<&OsClass> {
+		self.matches.iter()
+			.map(|m| m.classes.iter().find(|&c| {
+					let check = c.os_type.clone().unwrap_or("".to_string());
+					!check.contains("general") && !check.contains("specialized")
+				})
+			).filter(|c| c.is_some())
+			.map(|c| c.unwrap())
+			.collect::<Vec<&OsClass>>()
+	}
 }
 impl StructObject for OperatingSystem {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
 			"ports" => Some(Value::from(self.ports.clone())),
 			"matches" => Some(Value::from(self.matches.clone())),
+			"vendor" => {
+				let v = self.get_combined_os_classes()
+					.iter()
+					.map(|c| match c.os_type.clone() {
+						Some(t) => t,
+						None => self.matches.iter()
+							.map(|m| m.name.to_lowercase())
+							.map(|name| String::from( if name.contains("windows") { "Windows" } else { "Linux" } ))
+							.next()
+							.unwrap_or(String::from("Linux"))
+					})
+					.next();
+					Some(Value::from(v.unwrap_or(String::from("Linux"))))
+				},
+			"purpose" => {
+				let v = self.get_combined_os_classes()
+					.iter()
+					.map(|c| match c.os_type.clone() {
+						Some(t) => t,
+						None => self.matches.iter()
+							.map(|m| m.name.to_lowercase())
+							.map(|name| String::from( if name.contains("windows") { "Windows" } else { "Linux" } ))
+							.next()
+							.unwrap_or(String::from("Computer"))
+					})
+					.next();
+					Some(Value::from(v.unwrap_or(String::from("Computer"))))
+				},
 			_ => panic!("Unknown field {} on {}", name, "OperatingSystem"),
 		}
 	}
