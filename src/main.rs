@@ -4,7 +4,6 @@ mod transform;
 
 use std::env;
 use transform::from_xml;
-use env_logger;
 
 pub use log::{info, warn, debug};
 

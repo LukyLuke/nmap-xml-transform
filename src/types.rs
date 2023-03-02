@@ -38,7 +38,7 @@ impl StructObject for NmapRun {
 			"command" => Some(Value::from(self.command.clone())),
 			"start_time" => Some(Value::from(self.start_time.clone())),
 			"finish_time" => Some(Value::from(self.runstats.finished.finish_time.clone())),
-			"elapsed_time" => Some(Value::from(self.runstats.finished.elapsed.clone())),
+			"elapsed_time" => Some(Value::from(self.runstats.finished.elapsed)),
 			"status" => Some(Value::from(self.runstats.finished.status.clone())),
 			_ => panic!("Unknown field {} on {}", name, "NmapRun"),
 		}
@@ -60,9 +60,9 @@ impl StructObject for RunStats {
 		match name {
 			"finished" => Some(Value::from_struct_object(self.finished.clone())),
 			"hosts" => Some(Value::from_struct_object(self.hosts.clone())),
-			"hosts_total" => Some(Value::from(self.hosts.total.clone())),
-			"hosts_online" => Some(Value::from(self.hosts.up.clone())),
-			"hosts_offline" => Some(Value::from(self.hosts.down.clone())),
+			"hosts_total" => Some(Value::from(self.hosts.total)),
+			"hosts_online" => Some(Value::from(self.hosts.up)),
+			"hosts_offline" => Some(Value::from(self.hosts.down)),
 			_ => panic!("Unknown field {} on {}", name, "RunStats"),
 		}
 	}
@@ -85,7 +85,7 @@ impl StructObject for Finished {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
 			"finish_time" => Some(Value::from(self.finish_time.clone())),
-			"elapsed" => Some(Value::from(self.elapsed.clone())),
+			"elapsed" => Some(Value::from(self.elapsed)),
 			"status" => Some(Value::from(self.status.clone())),
 			_ => panic!("Unknown field {} on {}", name, "Finished"),
 		}
@@ -106,9 +106,9 @@ pub(crate) struct HostStats {
 impl StructObject for HostStats {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
-			"up" => Some(Value::from(self.up.clone())),
-			"down" => Some(Value::from(self.down.clone())),
-			"total" => Some(Value::from(self.total.clone())),
+			"up" => Some(Value::from(self.up)),
+			"down" => Some(Value::from(self.down)),
+			"total" => Some(Value::from(self.total)),
 			_ => panic!("Unknown field {} on {}", name, "RunStats"),
 		}
 	}
@@ -133,7 +133,7 @@ impl StructObject for ScanInfo {
 		match name {
 			"scantype" => Some(Value::from(self.scantype.clone())),
 			"protocol" => Some(Value::from(self.protocol.clone())),
-			"num_services" => Some(Value::from(self.num_services.clone())),
+			"num_services" => Some(Value::from(self.num_services)),
 			"serices" => Some(Value::from(self.services.clone())),
 			_ => panic!("Unknown field {} on {}", name, "ScanInfo"),
 		}
@@ -155,35 +155,37 @@ pub(crate) struct Host {
 }
 impl Host {
 	pub fn empty() -> Self {
-		let mut host = Host::default();
-		host.status = Some(HostState::empty());
-		host.hostnames = Some(HostNames::empty());
-		host.address.push(HostAddress::empty());
-		host.ports = Ports::empty();
-		host.os = Some(OperatingSystem::empty());
+		let mut host = Host {
+			status: Some(HostState::default()),
+			hostnames: Some(HostNames::empty()),
+			ports: Ports::empty(),
+			os: Some(OperatingSystem::empty()),
+			..Default::default()
+		};
+		host.address.push(HostAddress::default());
 		host
 	}
 }
 impl StructObject for Host {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
-			"status" => Some(Value::from(self.status.clone().unwrap_or(Default::default()))),
-			"hostnames" => Some(Value::from(self.hostnames.clone().unwrap_or(Default::default()))),
+			"status" => Some(Value::from(self.status.clone().unwrap_or_default())),
+			"hostnames" => Some(Value::from(self.hostnames.clone().unwrap_or_default())),
 			"address" => Some(Value::from(self.address.clone())),
 			"ipv4" => self.address.iter()
-				.filter(|addr| addr.address_type == AddressType::IPV4)
+				.filter(|addr| addr.address_type == AddressType::Ipv4)
 				.map(|val| Value::from(val.addr.clone()))
 				.next(),
 			"ipv6" => self.address.iter()
-				.filter(|addr| addr.address_type == AddressType::IPV6)
+				.filter(|addr| addr.address_type == AddressType::Ipv6)
 				.map(|val| Value::from(val.addr.clone()))
 				.next(),
 			"mac" => self.address.iter()
-				.filter(|addr| addr.address_type == AddressType::MAC)
+				.filter(|addr| addr.address_type == AddressType::Mac)
 				.map(|val| Value::from(val.addr.clone()))
 				.next(),
 			"ports" => Some(Value::from(self.ports.clone())),
-			"os" => Some(Value::from(self.os.clone().unwrap_or(Default::default()))),
+			"os" => Some(Value::from(self.os.clone().unwrap_or_default())),
 			_ => panic!("Unknown field {} on {}", name, "Host"),
 		}
 	}
@@ -197,18 +199,18 @@ impl From<Host> for Value {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum HostStates {
-	UP,
-	DOWN,
-	SKIPPED,
-	UNKNOWN,
+	Up,
+	Down,
+	Skipped,
+	Unknown,
 }
-impl Default for HostStates { fn default() -> Self { Self::UNKNOWN } }
+impl Default for HostStates { fn default() -> Self { Self::Unknown } }
 impl From<HostStates> for Value {
 	fn from(val: HostStates) -> Self {
 		match val {
-			HostStates::UP => Value::from("up"),
-			HostStates::DOWN => Value::from("down"),
-			HostStates::SKIPPED => Value::from("skipped"),
+			HostStates::Up => Value::from("up"),
+			HostStates::Down => Value::from("down"),
+			HostStates::Skipped => Value::from("skipped"),
 			_ => Value::from("unknown"),
 		}
 	}
@@ -220,9 +222,6 @@ pub(crate) struct HostState {
 	pub reason: String,
 	#[serde(rename = "reason_ttl")]
 	pub ttl: i16,
-}
-impl HostState {
-	pub fn empty() -> Self { HostState::default() }
 }
 impl StructObject for HostState {
 	fn get_field(&self, name: &str) -> Option<Value> {
@@ -295,19 +294,12 @@ pub(crate) struct HostAddress {
 	pub address_type: AddressType,
 	pub vendor: Option<String>,
 }
-impl HostAddress {
-	pub fn empty() -> Self {
-		let mut addr = HostAddress::default();
-		addr.vendor = Some(String::from(""));
-		addr
-	}
-}
 impl StructObject for HostAddress {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
 			"addr" => Some(Value::from(self.addr.clone())),
 			"address_type" => Some(Value::from(self.address_type.clone())),
-			"vendor" => Some(Value::from(self.vendor.clone().unwrap_or(Default::default()))),
+			"vendor" => Some(Value::from(self.vendor.clone().unwrap_or_default())),
 			_ => panic!("Unknown field {} on {}", name, "HostAddress"),
 		}
 	}
@@ -321,18 +313,18 @@ impl From<HostAddress> for Value {
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum AddressType {
-	IPV4,
-	IPV6,
-	MAC,
-	UNKNOWN,
+	Ipv4,
+	Ipv6,
+	Mac,
+	Unknown,
 }
-impl Default for AddressType { fn default() -> Self { Self::UNKNOWN } }
+impl Default for AddressType { fn default() -> Self { Self::Unknown } }
 impl From<AddressType> for Value {
 	fn from(val: AddressType) -> Self {
 		match val {
-			AddressType::IPV4 => Value::from("ipv4"),
-			AddressType::IPV6 => Value::from("ipv6"),
-			AddressType::MAC => Value::from("mac"),
+			AddressType::Ipv4 => Value::from("ipv4"),
+			AddressType::Ipv6 => Value::from("ipv6"),
+			AddressType::Mac => Value::from("mac"),
 			_ => Value::from("unknown"),
 		}
 	}
@@ -378,9 +370,10 @@ pub(crate) struct Port {
 }
 impl Port {
 	pub fn empty() -> Self {
-		let mut port = Port::default();
-		port.state = PortState::empty();
-		port.service = Some(PortService::empty());
+		let mut port = Port {
+			service: Some(PortService::empty()),
+			..Default::default()
+		};
 		port.script.push(Script::empty());
 		port
 	}
@@ -389,9 +382,9 @@ impl StructObject for Port {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
 			"protocol" => Some(Value::from(self.protocol.clone())),
-			"port" => Some(Value::from(self.port.clone())),
+			"port" => Some(Value::from(self.port)),
 			"state" => Some(Value::from(self.state.clone())),
-			"service" => Some(Value::from(self.service.clone().unwrap_or(Default::default()))),
+			"service" => Some(Value::from(self.service.clone().unwrap_or_default())),
 			"script" => Some(Value::from(self.script.clone())),
 			_ => panic!("Unknown field {} on {}", name, "Port"),
 		}
@@ -437,6 +430,7 @@ where
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[allow(clippy::upper_case_acronyms)]
 pub(crate) enum Protocol {
 	IP,
 	TCP,
@@ -458,23 +452,24 @@ impl From<Protocol> for Value {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum State {
-	OPEN,
-	CLOSED,
-	FILTERED,
+	Open,
+	Closed,
+	Filtered,
 }
-impl Default for State { fn default() -> Self { Self::FILTERED } }
+impl Default for State { fn default() -> Self { Self::Filtered } }
 impl From<State> for Value {
 	fn from(val: State) -> Self {
 		match val {
-			State::OPEN => Value::from("open"),
-			State::CLOSED => Value::from("closed"),
-			State::FILTERED => Value::from("filtered"),
+			State::Open => Value::from("open"),
+			State::Closed => Value::from("closed"),
+			State::Filtered => Value::from("filtered"),
 		}
 	}
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[allow(clippy::upper_case_acronyms)]
 pub(crate) enum Tunnel {
 	NO,
 	SSL,
@@ -497,13 +492,12 @@ pub(crate) struct PortState {
 	#[serde(rename = "reason_ttl")]
 	pub ttl: i16,
 }
-impl PortState { pub fn empty() -> Self { PortState::default() } }
 impl StructObject for PortState {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
 			"state" => Some(Value::from(self.state.clone())),
 			"reason" => Some(Value::from(self.reason.clone())),
-			"ttl" => Some(Value::from(self.ttl.clone())),
+			"ttl" => Some(Value::from(self.ttl)),
 			_ => panic!("Unknown field {} on {}", name, "PortState"),
 		}
 	}
@@ -518,9 +512,9 @@ impl FromStr for PortState {
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		Ok(PortState {
 			state: match s {
-				"open" => State::OPEN,
-				"filtered" => State::FILTERED,
-				_ => State::CLOSED
+				"open" => State::Open,
+				"filtered" => State::Filtered,
+				_ => State::Closed
 			},
 			reason: String::from(""),
 			ttl: 0,
@@ -544,10 +538,7 @@ pub(crate) struct PortService {
 impl PortService {
 	pub fn empty() -> Self {
 		let mut service = PortService::default();
-		service.product = Some(String::from(""));
-		service.version = Some(String::from(""));
-		service.footprint = Some(String::from(""));
-		service.cpe.push(Cpe::empty());
+		service.cpe.push(Cpe::default());
 		service
 	}
 }
@@ -555,10 +546,10 @@ impl StructObject for PortService {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
 			"service" => Some(Value::from(self.service.clone())),
-			"product" => Some(Value::from(self.product.clone().unwrap_or(Default::default()))),
-			"version" => Some(Value::from(self.version.clone().unwrap_or(Default::default()))),
+			"product" => Some(Value::from(self.product.clone().unwrap_or_default())),
+			"version" => Some(Value::from(self.version.clone().unwrap_or_default())),
 			"ssl" => Some(Value::from(self.ssl.clone())),
-			"footprint" => Some(Value::from(self.footprint.clone().unwrap_or(Default::default()))),
+			"footprint" => Some(Value::from(self.footprint.clone().unwrap_or_default())),
 			"cpe" => Some(Value::from(self.cpe.clone())),
 			_ => panic!("Unknown field {} on {}", name, "PortService"),
 		}
@@ -575,7 +566,6 @@ pub (crate) struct Cpe {
 	#[serde(rename = "$value")]
 	pub value: String,
 }
-impl Cpe { pub fn empty() -> Self { Cpe::default() } }
 impl StructObject for Cpe {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
@@ -603,8 +593,7 @@ pub(crate) struct Script {
 impl Script {
 	pub fn empty() -> Self {
 		let mut script = Script::default();
-		script.raw = Some(String::from(""));
-		script.elements.push(Element::empty());
+		script.elements.push(Element::default());
 		script.table.push(Table::empty());
 		script
 	}
@@ -613,7 +602,7 @@ impl StructObject for Script {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
 			"id" => Some(Value::from(self.id.clone())),
-			"raw" => Some(Value::from(self.raw.clone().unwrap_or(Default::default()))),
+			"raw" => Some(Value::from(self.raw.clone().unwrap_or_default())),
 			"elements" => Some(Value::from(self.elements.clone())),
 			"table" => Some(Value::from(self.table.clone())),
 			_ => panic!("Unknown field {} on {}", name, "Script"),
@@ -635,7 +624,6 @@ pub(crate) struct Table {
 impl Table {
 	pub fn empty() -> Self {
 		let mut table = Table::default();
-		table.key = Some(String::from(""));
 		table.rows.push(Row::empty());
 		table
 	}
@@ -643,9 +631,8 @@ impl Table {
 impl StructObject for Table {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
-			"key" => Some(Value::from(self.key.clone().unwrap_or(Default::default()))),
+			"key" => Some(Value::from(self.key.clone().unwrap_or_default())),
 			"rows" => Some(Value::from(self.rows.clone())),
-
 			_ => panic!("Unknown field {} on {}", name, "Table"),
 		}
 	}
@@ -665,7 +652,6 @@ pub(crate) struct Row {
 impl Row {
 	pub fn empty() -> Self {
 		let mut row = Row::default();
-		row.key = Some(String::from(""));
 		row.value.push(Col::default());
 		row
 	}
@@ -673,7 +659,7 @@ impl Row {
 impl StructObject for Row {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
-			"key" => Some(Value::from(self.key.clone().unwrap_or(Default::default()))),
+			"key" => Some(Value::from(self.key.clone().unwrap_or_default())),
 			"value" => Some(Value::from(self.value.clone())),
 			_ => panic!("Unknown field {} on {}", name, "Row"),
 		}
@@ -712,17 +698,10 @@ pub(crate) struct Element {
 	#[serde(rename = "$value")]
 	pub value: String,
 }
-impl Element {
-	pub fn empty() -> Self {
-		let mut elem = Element::default();
-		elem.key = Some(String::from(""));
-		elem
-	}
-}
 impl StructObject for Element {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
-			"key" => Some(Value::from(self.key.clone().unwrap_or(Default::default()))),
+			"key" => Some(Value::from(self.key.clone().unwrap_or_default())),
 			"value" => Some(Value::from(self.value.clone())),
 			_ => panic!("Unknown field {} on {}", name, "Element"),
 		}
@@ -751,12 +730,11 @@ impl OperatingSystem {
 
 	fn get_combined_os_classes(&self) -> Vec<&OsClass> {
 		self.matches.iter()
-			.map(|m| m.classes.iter().find(|&c| {
-					let check = c.os_type.clone().unwrap_or("".to_string());
+			.filter_map(|m| m.classes.iter().find(|&c| {
+					let check = c.os_type.clone().unwrap_or_default();
 					!check.contains("general") && !check.contains("specialized")
 				})
-			).filter(|c| c.is_some())
-			.map(|c| c.unwrap())
+			)
 			.collect::<Vec<&OsClass>>()
 	}
 }
@@ -774,10 +752,10 @@ impl StructObject for OperatingSystem {
 							.map(|m| m.name.to_lowercase())
 							.map(|name| String::from( if name.contains("windows") { "Windows" } else { "Linux" } ))
 							.next()
-							.unwrap_or(String::from("Linux"))
+							.unwrap_or_else(|| String::from("Linux"))
 					})
 					.next();
-					Some(Value::from(v.unwrap_or(String::from("Linux"))))
+					Some(Value::from(v.unwrap_or_else(|| String::from("Linux"))))
 				},
 			"purpose" => {
 				let v = self.get_combined_os_classes()
@@ -788,10 +766,10 @@ impl StructObject for OperatingSystem {
 							.map(|m| m.name.to_lowercase())
 							.map(|name| String::from( if name.contains("windows") { "Windows" } else { "Linux" } ))
 							.next()
-							.unwrap_or(String::from("Computer"))
+							.unwrap_or_else(|| String::from("Computer"))
 					})
 					.next();
-					Some(Value::from(v.unwrap_or(String::from("Computer"))))
+					Some(Value::from(v.unwrap_or_else(|| String::from("Computer"))))
 				},
 			_ => panic!("Unknown field {} on {}", name, "OperatingSystem"),
 		}
@@ -821,7 +799,7 @@ impl StructObject for OsMatch {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
 			"name" => Some(Value::from(self.name.clone())),
-			"accuracy" => Some(Value::from(self.accuracy.clone())),
+			"accuracy" => Some(Value::from(self.accuracy)),
 			"classes" => Some(Value::from(self.classes.clone())),
 			_ => panic!("Unknown field {} on {}", name, "OsMatch"),
 		}
@@ -849,21 +827,19 @@ pub(crate) struct OsClass {
 impl OsClass {
 	pub fn empty() -> Self {
 		let mut osclass = OsClass::default();
-		osclass.os_type = Some(String::from(""));
-		osclass.generation = Some(String::from(""));
-		osclass.cpe.push(Cpe::empty());
+		osclass.cpe.push(Cpe::default());
 		osclass
 	}
 }
 impl StructObject for OsClass {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
-			"type" => Some(Value::from(self.os_type.clone().unwrap_or(Default::default()))),
-			"os_type" => Some(Value::from(self.os_type.clone().unwrap_or(Default::default()))),
+			"type" => Some(Value::from(self.os_type.clone().unwrap_or_default())),
+			"os_type" => Some(Value::from(self.os_type.clone().unwrap_or_default())),
 			"vendor" => Some(Value::from(self.vendor.clone())),
-			"accuracy" => Some(Value::from(self.accuracy.clone())),
+			"accuracy" => Some(Value::from(self.accuracy)),
 			"family" => Some(Value::from(self.family.clone())),
-			"generation" => Some(Value::from(self.generation.clone().unwrap_or(Default::default()))),
+			"generation" => Some(Value::from(self.generation.clone().unwrap_or_default())),
 			"cpe" => Some(Value::from(self.cpe.clone())),
 			_ => panic!("Unknown field {} on {}", name, "OsClass"),
 		}

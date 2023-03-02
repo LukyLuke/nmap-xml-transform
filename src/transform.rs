@@ -18,7 +18,7 @@ pub fn from_xml(nmap_file: &str, template: &str) -> Result<(), Box<dyn std::erro
 	let tpl = env.get_template("nmap")?;
 	let rendered = tpl.render(context)?;
 
-	print!("{}\n", rendered);
+	println!("{}\n", rendered);
 
 	Ok(())
 }
@@ -27,15 +27,14 @@ fn parse_nmap_xml(nmap_file: &str) -> Result<NmapRun, Box<dyn std::error::Error>
 	let path = Path::new(nmap_file);
 	let display = path.display();
 
-	let mut file = match File::open(&path) {
+	let mut file = match File::open(path) {
 		Ok(file) => file,
 		Err(err) => return Err(Box::from(format!("Failed to open {}: {:#}", display, err)))
 	};
 
 	let mut content = String::new();
-	match file.read_to_string(&mut content) {
-		Err(err) => return Err(Box::from(format!("Failed to read {}: {:#}", display, err))),
-		_ => {}
+	if let Err(err) = file.read_to_string(&mut content) {
+		return Err(Box::from(format!("Failed to read {}: {:#}", display, err)));
 	}
 
 	match from_str::<NmapRun>(&content) {
@@ -48,14 +47,14 @@ fn read_template_string(template_file: &str) -> Result<String, Box<dyn std::erro
 	let path = Path::new(template_file);
 	let display = path.display();
 
-	let mut file = match File::open(&path) {
+	let mut file = match File::open(path) {
 		Ok(file) => file,
 		Err(err) => return Err(Box::from(format!("Failed to open {}: {:#}", display, err)))
 	};
 
 	let mut content = String::new();
 	match file.read_to_string(&mut content) {
-		Err(err) => return Err(Box::from(format!("Failed to read {}: {:#}", display, err))),
+		Err(err) => Err(Box::from(format!("Failed to read {}: {:#}", display, err))),
 		_ => Ok(content)
 	}
 }
