@@ -50,6 +50,11 @@
 
 ### Ports
 
+```
+TODO: After implementing a generic element for a script-table row use
+      use the "type" value in the link and "cvss" for "ioc_tlp_id"
+```
+
 | Port | Service | Product | State | CVEs |
 |----|----|----|----|----|
 
