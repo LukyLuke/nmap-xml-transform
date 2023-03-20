@@ -6,20 +6,22 @@
 
 AUTHORIZATION_TOKEN="Profile -> My Settings -> API Key"
 IRIS_DOMAIN="iris.example.dom"
+CASE_ID=2
 
-{%- for host in hosts %}
+{% for host in hosts %}
 {%- for port in host.ports.port %}
-{%- for script in port.script -%}
+{%- for script in port.script %}
   {%- if script.id == "vulners" %}
-    {%- for cve in script.table -%}{%- for row in cve.rows -%}{%- for elem in row.value -%}
-      {%- if elem.key == "id" %}
+    {%- for cve in script.table %}{% for row in cve.rows %}{% for elem in row.value -%}
+      {% if elem.key == "id" %}
 curl -k -X POST \
--H "'Authorization: Bearer ${AUTHORIZATION_TOKEN}'" \
+-H "Authorization: Bearer ${AUTHORIZATION_TOKEN}" \
 -H 'Content-Type: application/json' \
--d '{ "ioc_type_id": 144, "ioc_tlp_id": 2, "ioc_value": "{{elem.value}}", "ioc_description": "See [Vulners: {{elem.value}}](https://vulners.com/cve/{{elem.value}}) for more details", "ioc_tags": "import,vulners", "custom_attributes": {}, "cid": 2 }' \
+-d '{ "ioc_type_id": 144, "ioc_tlp_id": 2, "ioc_value": "{{elem.value}}", "ioc_description": "See [Vulners: {{elem.value}}](https://vulners.com/cve/{{elem.value}}) for more details", "ioc_tags": "import,vulners", "custom_attributes": {}, "cid": '${CASE_ID}' }' \
+-s \
 https://${IRIS_DOMAIN}/case/ioc/add
       {% endif %}
-    {%- endfor -%}{%- endfor -%}{%- endfor -%}
+    {%- endfor %}{% endfor %}{% endfor %}
   {%- endif -%}
 {%- endfor %}
 {%- endfor %}
