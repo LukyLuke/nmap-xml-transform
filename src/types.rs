@@ -671,26 +671,84 @@ impl From<Row> for Value {
 	}
 }
 
+
+/// Special handling of script table results
+/// See InnerTableVisitor for better description
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum Col {
 	Elem(Element),
-	#[serde(rename = "table", deserialize_with = "deserialize_inner_table")]
-	Other(String),
+	#[serde(deserialize_with = "deserialize_inner_table")]
+	Table(Element)
 }
-impl Default for Col { fn default() -> Self { Self::Other(String::from("Unknown")) } }
-fn deserialize_inner_table<'de, D: Deserializer<'de>>(deserializer: D) -> Result<String, D::Error> {
-	de::IgnoredAny::deserialize(deserializer)?;
-	Ok(String::from("Tables in tables not yet supported"))
+impl Default for Col { fn default() -> Self { Self::Elem( Default::default() ) } }
+fn deserialize_inner_table<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Element, D::Error> {
+	deserializer.deserialize_map(InnerTableVisitor)
 }
 impl From<Col> for Value {
 	fn from(val: Col) -> Self {
 		match val {
 			Col::Elem(elem) => Value::from_struct_object(elem),
-			Col::Other(msg) => Value::from(msg),
+			Col::Table(elem) => Value::from_struct_object(elem)
 		}
 	}
 }
+
+/// Special handling of script table results
+///
+/// Normal table results are like:
+///
+/// ```xml
+/// <table>
+///   <table>
+///     <elem key="">value</elem>
+///     <elem key="">value</elem>
+///   <table>
+/// <table>
+/// ```
+///
+/// Although there are scripts producing such an output, which is totally valid due to the schema:
+///
+/// ```xml
+/// <table>
+///   <table>
+///     <elem key="">value</elem>
+///     <table key="">
+///       <elem>value</elem>
+///       <elem>value</elem>
+///     </table>
+///     <elem key="">value</elem>
+///   <table>
+/// <table>
+/// ```
+/// The enum Col::Elem will parse the first variant,
+/// while the Col::Table is for the second nested variant
+///
+struct InnerTableVisitor;
+impl<'de> Visitor<'de> for InnerTableVisitor {
+	type Value = Element;
+
+	fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+		formatter.write_str("XML like <table key='key'><elem>value</elem><elem>value</elem></table> expected")
+	}
+
+	fn visit_map<M>(self, mut access: M) -> Result<Self::Value, M::Error>
+	where M: MapAccess<'de> {
+		let mut key_attr = String::from("");
+		let mut res = String::from("");
+		while let Some((key, value)) = access.next_entry::<String, String>()? {
+			match key.as_str() {
+				"elem" => {
+					if !res.is_empty() { res.push_str("."); }
+					res.push_str(&value)
+				},
+				_ => key_attr = String::from(value),
+			}
+		}
+		Ok(Element { key: Some(key_attr), value: res })
+	}
+}
+
 
 #[derive(Debug, Default, Clone, Deserialize)]
 pub(crate) struct Element {
@@ -829,6 +887,7 @@ impl OsClass {
 		let mut osclass = OsClass::default();
 		osclass.cpe.push(Cpe::default());
 		osclass
+
 	}
 }
 impl StructObject for OsClass {
