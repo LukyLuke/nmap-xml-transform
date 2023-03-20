@@ -1,0 +1,100 @@
+#!/bin/sh
+#
+
+AUTHORIZATION_TOKEN="Profile -> My Settings -> API Key"
+IRIS_DOMAIN="iris.example.dom"
+CASE_ID=2
+
+# These values may change or be different on your system
+# Currently we only can separate: 2, 4, 6, 9, 10, 12
+# default is "9 - Windows Computer"
+function get_asset_type_id() {
+  CHECK=${1// /}
+  CHECK=${CHECK//-/}
+  case $CHECK in
+    Account) echo 1 ;;
+    Firewall) echo 2 ;;
+    LinuxServer) echo 3 ;;
+    LinuxComputer) echo 4 ;;
+    LinuxAccount) echo 5 ;;
+    MacComputer) echo 6 ;;
+    PhoneAndroid) echo 7 ;;
+    PhoneIOS) echo 8 ;;
+    WindowsComputer) echo 9 ;;
+    WindowsServer) echo 10 ;;
+    WindowsDC) echo 11 ;;
+    Router) echo 12 ;;
+    Switch) echo 13 ;;
+    VPN) echo 14 ;;
+    WAF) echo 15 ;;
+    WindowsAccountLocal) echo 16 ;;
+    WindowsAccountLocalAdmin) echo 17 ;;
+    WindowsAccountAD) echo 18 ;;
+    WindowsAccountADAdmin) echo 19 ;;
+    WindowsAccountADkrbtgt) echo 20 ;;
+    WindowsAccountADService) echo 21 ;;
+    *) echo 9 ;;
+  esac
+}
+
+BASE=`basename $0`
+TMP_DIR=`mktemp -d -t $BASE.XXXXXXXXXX`
+
+{% for host in hosts %}
+
+curl -k -X POST \
+-H "Authorization: Bearer ${AUTHORIZATION_TOKEN}" \
+-H 'Content-Type: application/json' \
+-d '{%- if host.ipv4|length() > 0 -%}
+{ "asset_name":"{{host.ipv4}}", "asset_ip":"{{host.ipv4}}",
+{%- else -%}
+{ "asset_name":"{{host.ipv6}}", "asset_ip":"{{host.ipv6}}",
+{%- endif -%}
+"cid": '${CASE_ID}', "asset_type_id":'`get_asset_type_id "{{host.os.vendor}}{{host.os.purpose}}"`', "analysis_status_id": 1, "custom_attributes": {}, "asset_description": "{%- if host.hostnames.hostname|length() > 0 -%}
+### Hostnames\n\n
+{%- for name in host.hostnames.hostname -%}
+* {{ name.name }} {%- if name.host_type|length() > 0 %} ({{ name.host_type }}){% endif %}\n
+{%- endfor -%}
+\n\n
+{%- endif -%}
+
+{%- if host.os.matches|length() > 0 -%}
+### Operating System: {{ host.os.vendor }} {{ host.os.purpose }}\n\n
+{%- for os in host.os.matches -%}
+* **{{ os.name }}:** {{ os.accuracy }}% {% if os.classes|length() > 0 -%}\n
+  {%- for class in os.classes -%}
+  * {{ class.vendor }}{%- if class.generation|length() > 0 %} {{ class.generation }}{% endif %}: {{ class.accuracy }}% *({{ class.type }})*\n
+  {%- endfor -%}
+{% endif -%}
+{%- endfor -%}
+\n\n
+{%- endif -%}
+", "asset_info":"
+
+{%- if host.address|length() > 0 -%}
+### Addresses\n\n
+{%- for addr in host.address -%}
+* **{{ addr.address_type }}:** {{ addr.addr }} {%- if addr.vendor|length() > 0 %} ({{ addr.vendor }}){% endif %}\n
+{%- endfor -%}
+\n\n
+{%- endif -%}
+
+{%- if host.ports.port|length() > 0 -%}
+### Ports\n\n| Port | Service | Product | State | CVEs |\n|----|----|----|----|----|\n{%- for port in host.ports.port -%}
+| {{ port.port }}/{{ port.protocol }} | {{ port.service.service }} | {{ port.service.product }} {%- if port.service.version|length() > 0 %} ({{ port.service.version }}){% endif %} | {{ port.state.state }} | {%- for script in port.script -%}
+  {%- if script.id == "vulners" -%}
+    {%- for cve in script.table -%}{%- for row in cve.rows -%}{%- for elem in row.value -%}
+      {%- if elem.key == "id" -%}[{{ elem.value }}](https://vulners.com/cve/{{ elem.value }}); {% endif -%}
+    {%- endfor -%}{%- endfor -%}{%- endfor -%}
+  {%- endif -%}
+{%- endfor -%} |\n
+{%- endfor -%}
+\n
+{%- endif -%}
+"}' \
+-s -o ${TMP_DIR}/{%- if host.ipv4|length() > 0 -%}{{host.ipv4}}{% else %}{{host.ipv6}}{% endif %}.json \
+https://${IRIS_DOMAIN}/case/assets/add
+
+{%- endfor %}
+
+echo "Created {{runstats.hosts_online}} hosts and saved respose to ${TMP_DIR}"
