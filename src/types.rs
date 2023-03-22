@@ -605,12 +605,57 @@ impl StructObject for Script {
 			"raw" => Some(Value::from(self.raw.clone().unwrap_or_default())),
 			"elements" => Some(Value::from(self.elements.clone())),
 			"table" => Some(Value::from(self.table.clone())),
+			"items" => {
+				let mut items: Vec<ScriptItem> = vec![ScriptItem {
+					key: None,
+					items: self.elements.clone(),
+				}];
+				let collected: Vec<ScriptItem> = self.table.iter()
+					.map(|table| {
+						let mut item = ScriptItem {
+							key: table.key.clone(),
+							items: vec![],
+						};
+						table.rows.iter().for_each(|row| {
+							let row_items: Vec<Element> = row.value.iter().map(|col| match col {
+								Col::Elem(elem) => elem.clone(),
+								Col::Table(tbl) => tbl.clone(),
+							})
+							.collect();
+							item.items.append(&mut row_items.clone());
+						});
+						item
+					})
+					.collect();
+				items.append(&mut collected.clone());
+				Some(Value::from(items.clone()))
+			},
 			_ => panic!("Unknown field {} on {}", name, "Script"),
 		}
 	}
 }
 impl From<Script> for Value {
 	fn from(val: Script) -> Self {
+		Value::from_struct_object(val)
+	}
+}
+
+#[derive(Debug, Default, Clone)]
+pub(crate) struct ScriptItem {
+	pub key: Option<String>,
+	pub items: Vec<Element>,
+}
+impl StructObject for ScriptItem {
+	fn get_field(&self, name: &str) -> Option<Value> {
+		match name {
+			"key" => Some(Value::from(self.key.clone().unwrap_or_default())),
+			"items" => Some(Value::from(self.items.clone())),
+			_ => panic!("Unknown field {} on {}", name, "ScriptItem"),
+		}
+	}
+}
+impl From<ScriptItem> for Value {
+	fn from(val: ScriptItem) -> Self {
 		Value::from_struct_object(val)
 	}
 }
