@@ -30,7 +30,7 @@
 
 {% for addr in host.address -%}
 * **{{ addr.address_type }}:** {{ addr.addr }} {%- if addr.vendor|length() > 0 %} ({{ addr.vendor }}){% endif %}
-{%- endfor %}
+{% endfor %}
 {%- endif %}
 
 {%- if host.os.matches|length() > 0 %}
@@ -50,20 +50,13 @@
 
 ### Ports
 
-```
-TODO: After implementing a generic element for a script-table row use
-      use the "type" value in the link and "cvss" for "ioc_tlp_id"
-```
-
 | Port | Service | Product | State | CVEs |
 |----|----|----|----|----|
 
 {%- for port in host.ports.port %}
 | {{ port.port }}/{{ port.protocol }} | {{ port.service.service }} | {{ port.service.product }} {%- if port.service.version|length() > 0 %} ({{ port.service.version }}){% endif %} | {{ port.state.state }} | {% for script in port.script -%}
   {%- if script.id == "vulners" %}
-    {%- for cve in script.table -%}{%- for row in cve.rows -%}{%- for elem in row.value -%}
-      {%- if elem.key == "id" -%}[{{ elem.value }}](https://vulners.com/cve/{{ elem.value }}); {% endif -%}
-    {%- endfor -%}{%- endfor -%}{%- endfor -%}
+    {%- for cve in script.items %}[{{ cve.id }} (CVSS: {{ cve.cvss }})](https://vulners.com/{{ cve.type }}/{{ cve.id }}); {% endfor -%}
   {%- endif -%}
 {%- endfor %} |
 {%- endfor %}
