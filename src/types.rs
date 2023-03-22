@@ -606,28 +606,19 @@ impl StructObject for Script {
 			"elements" => Some(Value::from(self.elements.clone())),
 			"table" => Some(Value::from(self.table.clone())),
 			"items" => {
-				let mut items: Vec<ScriptItem> = vec![ScriptItem {
-					key: None,
-					items: self.elements.clone(),
-				}];
-				let collected: Vec<ScriptItem> = self.table.iter()
-					.map(|table| {
-						let mut item = ScriptItem {
-							key: table.key.clone(),
-							items: vec![],
-						};
+				let mut items: Vec<ScriptItem> = if self.elements.is_empty() { vec![] } else { vec![ScriptItem { key: None, items: self.elements.clone() }]};
+				self.table.iter()
+					.for_each(|table| {
 						table.rows.iter().for_each(|row| {
-							let row_items: Vec<Element> = row.value.iter().map(|col| match col {
-								Col::Elem(elem) => elem.clone(),
-								Col::Table(tbl) => tbl.clone(),
-							})
-							.collect();
-							item.items.append(&mut row_items.clone());
+							items.push(ScriptItem {
+								key: table.key.clone(),
+								items: row.value.iter().map(|col| match col {
+									Col::Elem(elem) => elem.clone(),
+									Col::Table(tbl) => tbl.clone(),
+								}).collect(),
+							});
 						});
-						item
-					})
-					.collect();
-				items.append(&mut collected.clone());
+				});
 				Some(Value::from(items.clone()))
 			},
 			_ => panic!("Unknown field {} on {}", name, "Script"),
@@ -650,7 +641,10 @@ impl StructObject for ScriptItem {
 		match name {
 			"key" => Some(Value::from(self.key.clone().unwrap_or_default())),
 			"items" => Some(Value::from(self.items.clone())),
-			_ => panic!("Unknown field {} on {}", name, "ScriptItem"),
+			_ => match self.items.iter().filter(|item| &item.key.clone().unwrap_or_default() == name).next() {
+				Some(elem) => Some(Value::from(elem.value.clone())),
+				None => None
+			},
 		}
 	}
 }
