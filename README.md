@@ -1,3 +1,7 @@
+This project was initiated due to many assets and IOCs from network scans and exposure analyses which where documented in [DFIR-IRIS](https://github.com/dfir-iris/iris-web).
+To not have to add and link all these assets and IOCs manually, the nmap xml output was perfect to transform into different formats and finally into a bunch of curl commands to manage everything via the API.
+
+
 # NMAP XML Transform
 
 Transforms an NMAP-XML File to any other file based on a template.
