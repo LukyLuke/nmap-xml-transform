@@ -617,7 +617,7 @@ impl StructObject for Script {
 							});
 						});
 				});
-				Some(Value::from(items.clone()))
+				Some(Value::from(items))
 			},
 			_ => panic!("Unknown field {} on {}", name, "Script"),
 		}
@@ -639,10 +639,9 @@ impl StructObject for ScriptItem {
 		match name {
 			"key" => Some(Value::from(self.key.clone().unwrap_or_default())),
 			"items" => Some(Value::from(self.items.clone())),
-			_ => match self.items.iter().filter(|item| &item.key.clone().unwrap_or_default() == name).next() {
-				Some(elem) => Some(Value::from(elem.value.clone())),
-				None => None
-			},
+			_ => self.items.iter()
+				.find(|item| item.key.clone().unwrap_or_default() == name)
+				.map(|elem| Value::from(elem.value.clone())),
 		}
 	}
 }
@@ -776,10 +775,10 @@ impl<'de> Visitor<'de> for InnerTableVisitor {
 		while let Some((key, value)) = access.next_entry::<String, String>()? {
 			match key.as_str() {
 				"elem" => {
-					if !res.is_empty() { res.push_str("."); }
+					if !res.is_empty() { res.push('.'); }
 					res.push_str(&value)
 				},
-				_ => key_attr = String::from(value),
+				_ => key_attr = value,
 			}
 		}
 		Ok(Element { key: Some(key_attr), value: res })
