@@ -1,12 +1,8 @@
 #!/bin/sh
-#
-# TODO: After implementing a generic element for a script-table row use
-#       use the "type" value in the link and "cvss" for "ioc_tlp_id"
-#
 
 AUTHORIZATION_TOKEN="Profile -> My Settings -> API Key"
 IRIS_DOMAIN="iris.example.dom"
-CASE_ID=2
+CASE_ID=1
 
 {% for host in hosts %}
 {%- for port in host.ports.port %}
@@ -14,10 +10,9 @@ CASE_ID=2
   {%- if script.id == "vulners" %}
     {%- for cve in script.items %}
 curl -k -X POST \
--H "Authorization: Bearer ${AUTHORIZA
-TION_TOKEN}" \
+-H "Authorization: Bearer ${AUTHORIZATION_TOKEN}" \
 -H 'Content-Type: application/json' \
--d '{ "ioc_type_id": 144, "ioc_tlp_id": 2, "ioc_value": "{{cve.id}}", "ioc_description": "CVSS3 Value: {{cve.cvss}}\nSee [Vulners: {{cve.id}}](https://vulners.com/{{cve.type}}/{{cve.id}}) for more details", "ioc_tags": "import,vulners", "custom_attributes": {}, "cid": '${CASE_ID}' }' \
+-d '{ "ioc_type_id": 144, "ioc_tlp_id": 2, "ioc_value": "{{cve.id}}", "ioc_description": "CVSS3 Value: {{cve.cvss}}\n\nSee [Vulners: {{cve.id}}](https://vulners.com/{{cve.type}}/{{cve.id}}) for more details", "ioc_tags": "import,vulners", "custom_attributes": {}, "cid": '${CASE_ID}' }' \
 -s \
 https://${IRIS_DOMAIN}/case/ioc/add
     {%- endfor %}

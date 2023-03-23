@@ -1,9 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 #
 
 AUTHORIZATION_TOKEN="Profile -> My Settings -> API Key"
 IRIS_DOMAIN="iris.example.dom"
-CASE_ID=2
+CASE_ID=1
 
 # These values may change or be different on your system
 # Currently we only can separate: 2, 4, 6, 9, 10, 12
@@ -37,12 +37,10 @@ function get_asset_type_id() {
   esac
 }
 
-BASE=`basename $0`
-TMP_DIR=`mktemp -d -t $BASE.XXXXXXXXXX`
-
 {% for host in hosts %}
 
-curl -k -X POST \
+# Create asset {{ host.ipv4 }}
+ASSET=$( curl -k -X POST \
 -H "Authorization: Bearer ${AUTHORIZATION_TOKEN}" \
 -H 'Content-Type: application/json' \
 -d '{%- if host.ipv4|length() > 0 -%}
@@ -90,9 +88,41 @@ curl -k -X POST \
 \n
 {%- endif -%}
 "}' \
--s -o ${TMP_DIR}/{%- if host.ipv4|length() > 0 -%}{{host.ipv4}}{% else %}{{host.ipv6}}{% endif %}.json \
-https://${IRIS_DOMAIN}/case/assets/add
+-s \
+https://${IRIS_DOMAIN}/case/assets/add | sed 's/.*"asset_id":\s*\([^,]*\).*/\1/' )
 
+# Create all found IOCs for the asset {{ host.ipv4 }}
+IOC_IDS=""
+{%- for port in host.ports.port %}
+{%- for script in port.script %}
+  {%- if script.id == "vulners" %}
+    {%- for cve in script.items %}
+
+IOC_ID=$( curl -k -X POST \
+-H "Authorization: Bearer ${AUTHORIZATION_TOKEN}" \
+-H 'Content-Type: application/json' \
+-d '{ "ioc_type_id": 144, "ioc_tlp_id": 2, "ioc_value": "{{cve.id}}", "ioc_description": "CVSS3 Value: {{cve.cvss}}\n\nSee [Vulners: {{cve.id}}](https://vulners.com/{{cve.type}}/{{cve.id}}) for more details", "ioc_tags": "import,vulners", "custom_attributes": {}, "cid": '${CASE_ID}' }' \
+-s \
+https://${IRIS_DOMAIN}/case/ioc/add | sed 's/.*"ioc_id":\s*\([^,]*\).*/\1/' )
+IOC_IDS="${IOC_IDS},\"${IOC_ID}\""
+    {%- endfor %}
+  {%- endif -%}
+{%- endfor %}
 {%- endfor %}
 
-echo "Created {{runstats.hosts_online}} hosts and saved respose to ${TMP_DIR}"
+# Update the asset {{ host.ipv4 }} with the IOCs
+if [ "x${IOC_IDS}" != "x" ]; then
+curl -k -X POST \
+-H "Authorization: Bearer ${AUTHORIZATION_TOKEN}" \
+-H 'Content-Type: application/json' \
+-d '{%- if host.ipv4|length() > 0 -%}
+{ "asset_name":"{{host.ipv4}}", "asset_ip":"{{host.ipv4}}",
+{%- else -%}
+{ "asset_name":"{{host.ipv6}}", "asset_ip":"{{host.ipv6}}",
+{%- endif -%}
+"cid": '${CASE_ID}', "asset_type_id":'`get_asset_type_id "{{host.os.vendor}}{{host.os.purpose}}"`', "analysis_status_id": 1, "custom_attributes": {}, "ioc_links": ['${IOC_IDS:1}']}' \
+-s \
+https://${IRIS_DOMAIN}/case/assets/update/${ASSET} 1>/dev/null
+fi
+
+{%- endfor %}
