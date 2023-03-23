@@ -12,7 +12,7 @@
 ## NMAP-Scripts
 
 {%- for host in hosts %}
-{%- for port in host.ports.port %}
+{%- for port in host.ports %}
 {%- for script in port.script -%}
 
 ### Script: {{ script.id }}

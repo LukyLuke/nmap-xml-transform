@@ -170,7 +170,7 @@ impl StructObject for Host {
 	fn get_field(&self, name: &str) -> Option<Value> {
 		match name {
 			"status" => Some(Value::from(self.status.clone().unwrap_or_default())),
-			"hostnames" => Some(Value::from(self.hostnames.clone().unwrap_or_default())),
+			"hostnames" => Some(Value::from(self.hostnames.clone().unwrap_or_default().hostname)),
 			"address" => Some(Value::from(self.address.clone())),
 			"ipv4" => self.address.iter()
 				.filter(|addr| addr.address_type == AddressType::Ipv4)
@@ -184,7 +184,7 @@ impl StructObject for Host {
 				.filter(|addr| addr.address_type == AddressType::Mac)
 				.map(|val| Value::from(val.addr.clone()))
 				.next(),
-			"ports" => Some(Value::from(self.ports.clone())),
+			"ports" => Some(Value::from(self.ports.clone().port)),
 			"os" => Some(Value::from(self.os.clone().unwrap_or_default())),
 			_ => panic!("Unknown field {} on {}", name, "Host"),
 		}
@@ -603,8 +603,6 @@ impl StructObject for Script {
 		match name {
 			"id" => Some(Value::from(self.id.clone())),
 			"raw" => Some(Value::from(self.raw.clone().unwrap_or_default())),
-			"elements" => Some(Value::from(self.elements.clone())),
-			"table" => Some(Value::from(self.table.clone())),
 			"items" => {
 				let mut items: Vec<ScriptItem> = if self.elements.is_empty() { vec![] } else { vec![ScriptItem { key: None, items: self.elements.clone() }]};
 				self.table.iter()

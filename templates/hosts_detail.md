@@ -15,11 +15,11 @@
 
 ## Host: {{ host.ipv4 }}
 
-{%- if host.hostnames.hostname|length() > 0 %}
+{%- if host.hostnames|length() > 0 %}
 
 ### Hostnames
 
-{% for name in host.hostnames.hostname -%}
+{% for name in host.hostnames -%}
 * {{ name.name }} {%- if name.host_type|length() > 0 %} ({{ name.host_type }}){% endif %}
 {%- endfor %}
 {%- endif %}
@@ -46,14 +46,14 @@
 {%- endfor %}
 {%- endif %}
 
-{%- if host.ports.port|length() > 0 %}
+{%- if host.ports|length() > 0 %}
 
 ### Ports
 
 | Port | Service | Product | State | CVEs |
 |----|----|----|----|----|
 
-{%- for port in host.ports.port %}
+{%- for port in host.ports %}
 | {{ port.port }}/{{ port.protocol }} | {{ port.service.service }} | {{ port.service.product }} {%- if port.service.version|length() > 0 %} ({{ port.service.version }}){% endif %} | {{ port.state.state }} | {% for script in port.script -%}
   {%- if script.id == "vulners" %}
     {%- for cve in script.items %}[{{ cve.id }} (CVSS: {{ cve.cvss }})](https://vulners.com/{{ cve.type }}/{{ cve.id }}); {% endfor -%}

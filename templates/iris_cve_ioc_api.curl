@@ -5,7 +5,7 @@ IRIS_DOMAIN="iris.example.dom"
 CASE_ID=1
 
 {% for host in hosts %}
-{%- for port in host.ports.port %}
+{%- for port in host.ports %}
 {%- for script in port.script %}
   {%- if script.id == "vulners" %}
     {%- for cve in script.items %}

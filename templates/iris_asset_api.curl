@@ -48,9 +48,9 @@ ASSET=$( curl -k -X POST \
 {%- else -%}
 { "asset_name":"{{host.ipv6}}", "asset_ip":"{{host.ipv6}}",
 {%- endif -%}
-"cid": '${CASE_ID}', "asset_type_id":'`get_asset_type_id "{{host.os.vendor}}{{host.os.purpose}}"`', "analysis_status_id": 1, "custom_attributes": {}, "asset_description": "{%- if host.hostnames.hostname|length() > 0 -%}
+"cid": '${CASE_ID}', "asset_type_id":'`get_asset_type_id "{{host.os.vendor}}{{host.os.purpose}}"`', "analysis_status_id": 1, "custom_attributes": {}, "asset_description": "{%- if host.hostnames|length() > 0 -%}
 ### Hostnames\n\n
-{%- for name in host.hostnames.hostname -%}
+{%- for name in host.hostnames -%}
 * {{ name.name }} {%- if name.host_type|length() > 0 %} ({{ name.host_type }}){% endif %}\n
 {%- endfor -%}
 \n\n
@@ -77,8 +77,8 @@ ASSET=$( curl -k -X POST \
 \n\n
 {%- endif -%}
 
-{%- if host.ports.port|length() > 0 -%}
-### Ports\n\n| Port | Service | Product | State | CVEs |\n|----|----|----|----|----|\n{%- for port in host.ports.port -%}
+{%- if host.ports|length() > 0 -%}
+### Ports\n\n| Port | Service | Product | State | CVEs |\n|----|----|----|----|----|\n{%- for port in host.ports -%}
 | {{ port.port }}/{{ port.protocol }} | {{ port.service.service }} | {{ port.service.product }} {%- if port.service.version|length() > 0 %} ({{ port.service.version }}){% endif %} | {{ port.state.state }} | {%- for script in port.script -%}
   {%- if script.id == "vulners" -%}
     {% for cve in script.items %}[{{ cve.id }} (CVSS: {{ cve.cvss }})](https://vulners.com/{{ cve.type }}/{{ cve.id }}); {% endfor %}
@@ -93,7 +93,7 @@ https://${IRIS_DOMAIN}/case/assets/add | sed 's/.*"asset_id":\s*\([^,]*\).*/\1/'
 
 # Create all found IOCs for the asset {{ host.ipv4 }}
 IOC_IDS=""
-{%- for port in host.ports.port %}
+{%- for port in host.ports %}
 {%- for script in port.script %}
   {%- if script.id == "vulners" %}
     {%- for cve in script.items %}
